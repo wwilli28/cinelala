@@ -430,11 +430,11 @@ export default function HomeClient({
         <header className="mb-8">
           <div className="relative flex min-h-[18rem] items-start justify-center md:min-h-[20rem]">
             {currentQuote ? (
-              <div className="absolute left-0 top-6 hidden max-w-xs md:block">
-                <p className="font-serif text-2xl italic leading-tight text-amber-400">
+              <div className="quote-intro absolute left-0 top-6 hidden max-w-xs md:block">
+                <p className="quote-intro-text font-serif text-2xl italic leading-tight text-amber-400">
                   &ldquo;{currentQuote.quote}&rdquo;
                 </p>
-                <p className="mt-3 font-serif text-base italic text-amber-400/90">
+                <p className="quote-intro-credit mt-3 font-serif text-base italic text-amber-400/90">
                   {currentQuote.name}
                 </p>
               </div>
