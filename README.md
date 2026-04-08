@@ -1,24 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a Next.js app for aggregating repertory and specialty screenings across Los Angeles theaters.
 
 ## Getting Started
 
-First, run the development server:
+1. Create a local env file:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Add your TMDB bearer token to `.env.local`:
+
+```bash
+TMDB_API_KEY=your_tmdb_bearer_token_here
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+3. Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## TMDB
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+TMDB enrichment is optional but recommended. When `TMDB_API_KEY` is configured, the app can fill in missing:
+
+- release year
+- director
+- runtime
+- overview
+- TMDB poster fallback
+
+Without it, theaters like Nuart may still show the correct title and poster from the source site, but some cards will be missing year/director metadata.
+
+Use a TMDB v4 bearer token in `TMDB_API_KEY`.
+
+## Supabase Login And Favorites
+
+User accounts and persisted favorites use Supabase Auth plus a `favorites` table.
+
+1. Create a Supabase project.
+2. Copy your project URL and anon key into `.env.local`.
+3. In the Supabase SQL editor, run [supabase/favorites.sql](/Users/wadsworth/Desktop/la_showtimes/supabase/favorites.sql).
+
+The app now works like this:
+
+- logged out: favorites stay local in the browser
+- logged in: favorites are saved to Supabase and follow the user across visits
+
+The login page is available at `/auth`.
 
 ## Learn More
 
