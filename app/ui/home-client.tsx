@@ -425,7 +425,7 @@ export default function HomeClient({
   }
 
   return (
-    <main className="min-h-screen bg-black p-8 text-white">
+    <main className="min-h-screen bg-white p-8 text-zinc-950">
       <div className="mx-auto max-w-6xl">
         <header className="mb-8">
           <div className="relative flex min-h-[18rem] items-start justify-center md:min-h-[20rem]">
@@ -489,12 +489,12 @@ export default function HomeClient({
             {supabaseConfigured ? (
               userEmail ? (
                 <>
-                  <p className="text-sm text-zinc-400">{userEmail}</p>
+                  <p className="text-sm text-zinc-600">{userEmail}</p>
                   <button
                     type="button"
                     onClick={handleSignOut}
                     disabled={authPending}
-                    className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-white transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full border border-zinc-300 px-4 py-2 text-sm text-zinc-900 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {authPending ? "Signing out..." : "Log out"}
                   </button>
@@ -502,7 +502,7 @@ export default function HomeClient({
               ) : (
                 <Link
                   href="/auth"
-                  className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-white transition hover:border-zinc-500"
+                  className="rounded-full border border-zinc-300 px-4 py-2 text-sm text-zinc-900 transition hover:border-zinc-500"
                 >
                   Log in to save My Favs
                 </Link>
@@ -574,7 +574,7 @@ export default function HomeClient({
           ) : null}
           {selectedDate ? (
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-zinc-600">
                 Showing films for {formatDateHeading(selectedDate)}
               </p>
               <button
@@ -583,7 +583,7 @@ export default function HomeClient({
                   rotateQuote();
                   setSelectedDate(null);
                 }}
-                className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-white transition hover:border-zinc-500"
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 transition hover:border-zinc-500"
               >
                 Clear date
               </button>
@@ -591,7 +591,7 @@ export default function HomeClient({
           ) : null}
           {groupedPrograms.map(([date, dayPrograms]) => (
             <div key={date}>
-              <h2 className="mb-6 border-b border-zinc-800 pb-2 text-2xl font-semibold text-white">
+              <h2 className="mb-6 border-b border-zinc-200 pb-2 text-2xl font-semibold text-zinc-950">
                 {formatDateHeading(date)}
               </h2>
 
@@ -768,7 +768,7 @@ export default function HomeClient({
                           href={program.sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-block rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-white"
+                          className="inline-block rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:border-zinc-500"
                         >
                           Source
                         </a>

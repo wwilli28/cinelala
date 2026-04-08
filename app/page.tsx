@@ -48,7 +48,7 @@ async function HomeContent() {
 }
 
 function HomeFallback() {
-  return <main className="min-h-screen bg-black" />;
+  return <main className="min-h-screen bg-white" />;
 }
 
 export default function Home() {
