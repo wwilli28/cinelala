@@ -24,3 +24,53 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes quoteFadeLift {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) rotate(1deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
+@keyframes quoteGlowIn {
+  from {
+    opacity: 0;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 0 rgba(251, 191, 36, 0);
+  }
+
+  to {
+    opacity: 1;
+    letter-spacing: 0;
+    text-shadow: 0 10px 30px rgba(251, 191, 36, 0.18);
+  }
+}
+
+.quote-intro {
+  opacity: 0;
+  animation: quoteFadeLift 700ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
+}
+
+.quote-intro-text {
+  opacity: 0;
+  animation: quoteGlowIn 900ms cubic-bezier(0.16, 1, 0.3, 1) 220ms forwards;
+}
+
+.quote-intro-credit {
+  opacity: 0;
+  animation: quoteFadeLift 700ms cubic-bezier(0.22, 1, 0.36, 1) 420ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-intro,
+  .quote-intro-text,
+  .quote-intro-credit {
+    opacity: 1;
+    animation: none;
+  }
+}
