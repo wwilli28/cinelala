@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,6 +37,8 @@ interface CalendarDayCell {
   date: string | null;
   dayNumber: number | null;
 }
+
+const AuthForm = dynamic(() => import("@/app/ui/auth-form"));
 
 const FAVORITES_STORAGE_KEY = "cine-lala-favorite-films";
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -445,6 +448,8 @@ export default function HomeClient({
                 alt="LA Showtimes"
                 width={420}
                 height={420}
+                priority
+                sizes="(max-width: 768px) 80vw, 420px"
                 className="h-auto w-auto max-h-64 max-w-full object-contain md:max-h-72"
               />
             </div>
@@ -462,6 +467,23 @@ export default function HomeClient({
               />
             ) : null}
           </div>
+          {supabaseConfigured && !userEmail ? (
+            <div className="mt-6 flex justify-center md:justify-end">
+              <div className="w-full max-w-md">
+                <p className="mb-3 text-center text-sm text-amber-300 md:text-right">
+                  Sign in below to save My Favs across visits.
+                </p>
+                <AuthForm accent="amber" className="border-amber-400/60" />
+                <p className="mt-3 text-center text-sm text-amber-300/80 md:text-right">
+                  Prefer a dedicated page?{" "}
+                  <Link href="/auth" className="text-amber-300 transition hover:text-amber-200">
+                    Open the full login screen
+                  </Link>
+                  .
+                </p>
+              </div>
+            </div>
+          ) : null}
         </header>
 
         {statuses
@@ -499,14 +521,7 @@ export default function HomeClient({
                     {authPending ? "Signing out..." : "Log out"}
                   </button>
                 </>
-              ) : (
-                <Link
-                  href="/auth"
-                  className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-white transition hover:border-zinc-500"
-                >
-                  Log in to save My Favs
-                </Link>
-              )
+              ) : null
             ) : null}
           </div>
           <p className="mb-4 text-center font-serif text-lg italic text-amber-400">
