@@ -1,10 +1,11 @@
 "use client";
 
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { theaterAccentColors } from "@/lib/constants/theaters";
 import {
@@ -28,8 +29,6 @@ interface HomeClientProps {
   programs: ScreeningProgram[];
   statuses: TheaterSourceStatus[];
   theaters: TheaterDefinition[];
-  initialFavoriteFilmIds: string[];
-  userEmail: string | null;
   supabaseConfigured: boolean;
 }
 
@@ -272,8 +271,6 @@ export default function HomeClient({
   programs,
   statuses,
   theaters,
-  initialFavoriteFilmIds,
-  userEmail,
   supabaseConfigured,
 }: HomeClientProps) {
   const router = useRouter();
@@ -281,15 +278,88 @@ export default function HomeClient({
   const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(() =>
     pickRandomQuoteId()
   );
-  const [favoriteFilmIds, setFavoriteFilmIds] = useState<string[]>(
-    userEmail ? initialFavoriteFilmIds : getStoredFavoriteFilmIds
-  );
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [favoriteFilmIds, setFavoriteFilmIds] = useState<string[]>(getStoredFavoriteFilmIds);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const [authPending, setAuthPending] = useState(false);
   const currentQuote =
     quotes.find((quote) => quote.id === currentQuoteId) ?? quotes[0] ?? null;
+
+  useEffect(() => {
+    if (!supabaseConfigured) {
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+
+    if (!supabase) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadFavoritesForUser(email: string | null) {
+      if (!active) {
+        return;
+      }
+
+      setUserEmail(email);
+
+      if (!email) {
+        setFavoriteFilmIds(getStoredFavoriteFilmIds());
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("favorites")
+        .select("film_id")
+        .order("created_at", { ascending: false });
+
+      if (!active) {
+        return;
+      }
+
+      if (error) {
+        setFavoriteError(error.message);
+        return;
+      }
+
+      setFavoriteFilmIds(
+        (data ?? [])
+          .map((favorite: { film_id: string | null }) => favorite.film_id)
+          .filter((filmId: string | null): filmId is string => typeof filmId === "string")
+      );
+    }
+
+    async function hydrateAuth() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      await loadFavoritesForUser(user?.email ?? null);
+    }
+
+    void hydrateAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+      setFavoriteError(null);
+      void loadFavoritesForUser(session?.user?.email ?? null);
+      startTransition(() => {
+        router.refresh();
+      });
+      }
+    );
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [router, supabaseConfigured]);
 
   function rotateQuote() {
     setCurrentQuoteId((current) => pickRandomQuoteId(current));

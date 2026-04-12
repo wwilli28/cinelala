@@ -54,6 +54,10 @@ async function fetchTmdbJson<T>(path: string) {
     signal: AbortSignal.timeout(10_000),
   });
 
+  if (response.status === 401) {
+    return null;
+  }
+
   if (!response.ok) {
     throw new Error(`TMDB request failed with ${response.status}`);
   }
