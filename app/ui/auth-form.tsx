@@ -7,6 +7,14 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthMode = "sign-in" | "sign-up";
 
+function getEmailRedirectTo() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  return window.location.origin;
+}
+
 export default function AuthForm({
   className,
   accent = "default",
@@ -37,7 +45,13 @@ export default function AuthForm({
     const response =
       mode === "sign-in"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: getEmailRedirectTo(),
+            },
+          });
 
     setSubmitting(false);
 
