@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { connection } from "next/server";
 
 import { screenings as legacyScreenings } from "@/app/lib/screenings";
 import { theaters } from "@/lib/constants/theaters";
@@ -98,9 +98,7 @@ function getLegacyPrograms() {
 }
 
 export async function getHomepagePrograms() {
-  "use cache";
-
-  cacheLife("hours");
+  await connection();
 
   const [newBeverly, aero, egyptian, vista, nuart, academy] = await Promise.all([
     getNewBeverlyPrograms(),

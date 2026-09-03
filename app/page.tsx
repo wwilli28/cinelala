@@ -3,18 +3,14 @@ import { Suspense } from "react";
 import HomeClient from "@/app/ui/home-client";
 import { theaters } from "@/lib/constants/theaters";
 import { getHomepagePrograms } from "@/lib/data/get-screenings";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 async function HomeContent() {
   const { programs, statuses } = await getHomepagePrograms();
-  const supabaseConfigured = isSupabaseConfigured();
-
   return (
     <HomeClient
       programs={programs}
       statuses={statuses}
       theaters={theaters}
-      supabaseConfigured={supabaseConfigured}
     />
   );
 }
