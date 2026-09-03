@@ -1,3 +1,4 @@
+import { cacheLife, cacheTag } from "next/cache";
 import { connection } from "next/server";
 
 import { screenings as legacyScreenings } from "@/app/lib/screenings";
@@ -97,8 +98,15 @@ function getLegacyPrograms() {
     });
 }
 
-export async function getHomepagePrograms() {
-  await connection();
+async function getCachedScreeningSources() {
+  "use cache";
+
+  cacheLife({
+    stale: 60 * 60,
+    revalidate: 60 * 60 * 6,
+    expire: 60 * 60 * 24,
+  });
+  cacheTag("screenings:homepage");
 
   const [newBeverly, aero, egyptian, vista, nuart, academy] = await Promise.all([
     getNewBeverlyPrograms(),
@@ -108,17 +116,36 @@ export async function getHomepagePrograms() {
     getNuartPrograms(),
     getAcademyPrograms(),
   ]);
-  const legacyPrograms = getLegacyPrograms();
+
+  return {
+    programs: [
+      ...newBeverly.programs,
+      ...aero.programs,
+      ...egyptian.programs,
+      ...vista.programs,
+      ...nuart.programs,
+      ...academy.programs,
+      ...getLegacyPrograms(),
+    ],
+    statuses: [
+      newBeverly.status,
+      aero.status,
+      egyptian.status,
+      vista.status,
+      nuart.status,
+      academy.status,
+    ].filter((status): status is TheaterSourceStatus => Boolean(status)),
+  };
+}
+
+export async function getHomepagePrograms() {
+  const sourcesPromise = getCachedScreeningSources();
+
+  await connection();
+
   const now = new Date();
-  const programs = [
-    ...newBeverly.programs,
-    ...aero.programs,
-    ...egyptian.programs,
-    ...vista.programs,
-    ...nuart.programs,
-    ...academy.programs,
-    ...legacyPrograms,
-  ]
+  const sources = await sourcesPromise;
+  const programs = sources.programs
     .filter((program) => isProgramUpcoming(program.date, now))
     .sort((first, second) =>
       compareProgramStarts(
@@ -131,13 +158,6 @@ export async function getHomepagePrograms() {
 
   return {
     programs,
-    statuses: [
-      newBeverly.status,
-      aero.status,
-      egyptian.status,
-      vista.status,
-      nuart.status,
-      academy.status,
-    ].filter((status): status is TheaterSourceStatus => Boolean(status)),
+    statuses: sources.statuses,
   };
 }
