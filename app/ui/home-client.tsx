@@ -1,11 +1,7 @@
 "use client";
 
-import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import dynamic from "next/dynamic";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { theaterAccentColors } from "@/lib/constants/theaters";
 import {
@@ -18,7 +14,6 @@ import {
   getProgramPosterUrls,
 } from "@/lib/presenters/programs";
 import { quotes } from "@/lib/quotes";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   ScreeningProgram,
   TheaterDefinition,
@@ -29,15 +24,12 @@ interface HomeClientProps {
   programs: ScreeningProgram[];
   statuses: TheaterSourceStatus[];
   theaters: TheaterDefinition[];
-  supabaseConfigured: boolean;
 }
 
 interface CalendarDayCell {
   date: string | null;
   dayNumber: number | null;
 }
-
-const AuthForm = dynamic(() => import("@/app/ui/auth-form"));
 
 const FAVORITES_STORAGE_KEY = "cine-lala-favorite-films";
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -271,95 +263,16 @@ export default function HomeClient({
   programs,
   statuses,
   theaters,
-  supabaseConfigured,
 }: HomeClientProps) {
-  const router = useRouter();
   const [selectedTheaters, setSelectedTheaters] = useState<string[]>([]);
   const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(() =>
     pickRandomQuoteId()
   );
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [favoriteFilmIds, setFavoriteFilmIds] = useState<string[]>(getStoredFavoriteFilmIds);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [favoriteError, setFavoriteError] = useState<string | null>(null);
-  const [authPending, setAuthPending] = useState(false);
   const currentQuote =
     quotes.find((quote) => quote.id === currentQuoteId) ?? quotes[0] ?? null;
-
-  useEffect(() => {
-    if (!supabaseConfigured) {
-      return;
-    }
-
-    const supabase = getSupabaseBrowserClient();
-
-    if (!supabase) {
-      return;
-    }
-
-    let active = true;
-
-    async function loadFavoritesForUser(email: string | null) {
-      if (!active) {
-        return;
-      }
-
-      setUserEmail(email);
-
-      if (!email) {
-        setFavoriteFilmIds(getStoredFavoriteFilmIds());
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("favorites")
-        .select("film_id")
-        .order("created_at", { ascending: false });
-
-      if (!active) {
-        return;
-      }
-
-      if (error) {
-        setFavoriteError(error.message);
-        return;
-      }
-
-      setFavoriteFilmIds(
-        (data ?? [])
-          .map((favorite: { film_id: string | null }) => favorite.film_id)
-          .filter((filmId: string | null): filmId is string => typeof filmId === "string")
-      );
-    }
-
-    async function hydrateAuth() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      await loadFavoritesForUser(user?.email ?? null);
-    }
-
-    void hydrateAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
-      setFavoriteError(null);
-      void loadFavoritesForUser(session?.user?.email ?? null);
-      startTransition(() => {
-        router.refresh();
-      });
-      }
-    );
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, [router, supabaseConfigured]);
 
   function rotateQuote() {
     setCurrentQuoteId((current) => pickRandomQuoteId(current));
@@ -370,37 +283,12 @@ export default function HomeClient({
     return next;
   }
 
-  async function toggleFavoriteFilm(filmId: string) {
-    const current = favoriteFilmIds;
-    const nextFavorites = current.includes(filmId)
-      ? current.filter((id) => id !== filmId)
-      : [...current, filmId];
+  function toggleFavoriteFilm(filmId: string) {
+    const nextFavorites = favoriteFilmIds.includes(filmId)
+      ? favoriteFilmIds.filter((id) => id !== filmId)
+      : [...favoriteFilmIds, filmId];
 
-    setFavoriteError(null);
-
-    if (!userEmail || !supabaseConfigured) {
-      setFavoriteFilmIds(updateFavoriteFilmIds(nextFavorites));
-      return;
-    }
-
-    setFavoriteFilmIds(nextFavorites);
-
-    const supabase = getSupabaseBrowserClient();
-
-    if (!supabase) {
-      setFavoriteError("Favorites sync is not configured yet.");
-      setFavoriteFilmIds(current);
-      return;
-    }
-
-    const response = current.includes(filmId)
-      ? await supabase.from("favorites").delete().eq("film_id", filmId)
-      : await supabase.from("favorites").insert({ film_id: filmId });
-
-    if (response.error) {
-      setFavoriteError(response.error.message);
-      setFavoriteFilmIds(current);
-    }
+    setFavoriteFilmIds(updateFavoriteFilmIds(nextFavorites));
   }
 
   function isFavoriteFilm(filmId: string) {
@@ -484,19 +372,6 @@ export default function HomeClient({
       : defaultVisibleMonth;
   const availableDates = new Set(filteredPrograms.map((program) => program.date));
 
-  async function handleSignOut() {
-    const supabase = getSupabaseBrowserClient();
-
-    if (!supabase) {
-      return;
-    }
-
-    setAuthPending(true);
-    await supabase.auth.signOut();
-    setAuthPending(false);
-    router.refresh();
-  }
-
   return (
     <main className="min-h-screen bg-black p-8 text-white">
       <div className="mx-auto max-w-6xl">
@@ -537,23 +412,6 @@ export default function HomeClient({
               />
             ) : null}
           </div>
-          {supabaseConfigured && !userEmail ? (
-            <div className="mt-6 flex justify-center md:justify-end">
-              <div className="w-full max-w-md">
-                <p className="mb-3 text-center text-sm text-amber-300 md:text-right">
-                  Sign in below to save My Favs across visits.
-                </p>
-                <AuthForm accent="amber" className="border-amber-400/60" />
-                <p className="mt-3 text-center text-sm text-amber-300/80 md:text-right">
-                  Prefer a dedicated page?{" "}
-                  <Link href="/auth" className="text-amber-300 transition hover:text-amber-200">
-                    Open the full login screen
-                  </Link>
-                  .
-                </p>
-              </div>
-            </div>
-          ) : null}
         </header>
 
         {statuses
@@ -577,23 +435,6 @@ export default function HomeClient({
           })}
 
         <section className="mb-6">
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
-            {supabaseConfigured ? (
-              userEmail ? (
-                <>
-                  <p className="text-sm text-zinc-400">{userEmail}</p>
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    disabled={authPending}
-                    className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-white transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {authPending ? "Signing out..." : "Log out"}
-                  </button>
-                </>
-              ) : null
-            ) : null}
-          </div>
           <p className="mb-4 text-center font-serif text-lg italic text-amber-400">
             Classic and repertory screenings across Los Angeles
           </p>
@@ -652,11 +493,6 @@ export default function HomeClient({
         </section>
 
         <section className="space-y-12">
-          {favoriteError ? (
-            <div className="rounded-2xl border border-amber-700/60 bg-amber-950/40 p-4 text-sm text-amber-100">
-              {favoriteError}
-            </div>
-          ) : null}
           {selectedDate ? (
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm text-zinc-400">
