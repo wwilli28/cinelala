@@ -6,6 +6,7 @@ import { theaters } from "@/lib/constants/theaters";
 import { compareProgramStarts, isProgramUpcoming } from "@/lib/ingestion/time";
 import {
   getAeroPrograms,
+  getDirectorsVillagePrograms,
   getEgyptianPrograms,
 } from "@/lib/theaters/american-cinematheque";
 import { getAcademyPrograms } from "@/lib/theaters/academy";
@@ -108,10 +109,11 @@ async function getCachedScreeningSources() {
   });
   cacheTag("screenings:homepage");
 
-  const [newBeverly, aero, egyptian, vista, nuart, academy] = await Promise.all([
+  const [newBeverly, aero, egyptian, directorsVillage, vista, nuart, academy] = await Promise.all([
     getNewBeverlyPrograms(),
     getAeroPrograms(),
     getEgyptianPrograms(),
+    getDirectorsVillagePrograms(),
     getVistaPrograms(),
     getNuartPrograms(),
     getAcademyPrograms(),
@@ -122,6 +124,7 @@ async function getCachedScreeningSources() {
       ...newBeverly.programs,
       ...aero.programs,
       ...egyptian.programs,
+      ...directorsVillage.programs,
       ...vista.programs,
       ...nuart.programs,
       ...academy.programs,
@@ -131,6 +134,7 @@ async function getCachedScreeningSources() {
       newBeverly.status,
       aero.status,
       egyptian.status,
+      directorsVillage.status,
       vista.status,
       nuart.status,
       academy.status,

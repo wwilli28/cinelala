@@ -16,9 +16,10 @@ import {
 const AMERICAN_CINEMATHEQUE_API =
   "https://www.americancinematheque.com/wp-json/wp/v2/event";
 
-const LOCATION_IDS: Record<"aero" | "egyptian", number> = {
+const LOCATION_IDS: Record<"aero" | "egyptian" | "directors-village", number> = {
   aero: 54,
   egyptian: 55,
+  "directors-village": 181,
 };
 
 interface AmericanCinemathequeEvent {
@@ -234,7 +235,7 @@ function mapEventToProgram(
 }
 
 async function getProgramsForTheater(
-  theater: "aero" | "egyptian"
+  theater: "aero" | "egyptian" | "directors-village"
 ): Promise<TheaterProgramsResult> {
   "use cache";
 
@@ -288,4 +289,8 @@ export async function getAeroPrograms() {
 
 export async function getEgyptianPrograms() {
   return getProgramsForTheater("egyptian");
+}
+
+export async function getDirectorsVillagePrograms() {
+  return getProgramsForTheater("directors-village");
 }

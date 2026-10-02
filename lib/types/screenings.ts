@@ -2,6 +2,7 @@ export type TheaterSlug =
   | "new-beverly"
   | "aero"
   | "egyptian"
+  | "directors-village"
   | "vista"
   | "nuart"
   | "academy";

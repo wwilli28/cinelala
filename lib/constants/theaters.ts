@@ -23,6 +23,13 @@ export const theaters: TheaterDefinition[] = [
     neighborhood: "Hollywood",
   },
   {
+    slug: "directors-village",
+    name: "The Directors Village",
+    url: "https://www.americancinematheque.com/now-showing/?event_location=181&view_type=list",
+    logo: "/logos/directors-village.png",
+    neighborhood: "Westwood",
+  },
+  {
     slug: "vista",
     name: "The Vista",
     url: "https://www.vistatheaterhollywood.com/schedule/",
@@ -49,6 +56,7 @@ export const theaterAccentColors: Record<TheaterSlug, string> = {
   "new-beverly": "#C7332E",
   aero: "#6D8F3C",
   egyptian: "#F5F5F5",
+  "directors-village": "#28BFFF",
   vista: "#3E63B8",
   nuart: "#E36AA5",
   academy: "#C7A24A",

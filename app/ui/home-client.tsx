@@ -269,7 +269,6 @@ export default function HomeClient({
     pickRandomQuoteId()
   );
   const [favoriteFilmIds, setFavoriteFilmIds] = useState<string[]>(getStoredFavoriteFilmIds);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const currentQuote =
     quotes.find((quote) => quote.id === currentQuoteId) ?? quotes[0] ?? null;
@@ -318,13 +317,9 @@ export default function HomeClient({
           selectedTheaters.includes(
             theaters.find((theater) => theater.slug === program.theater)?.name ?? ""
           );
-        const matchesFavorites =
-          !showFavoritesOnly ||
-          program.films.some((film) => favoriteFilmIds.includes(film.id));
-
-        return matchesTheater && matchesFavorites;
+        return matchesTheater;
       }),
-    [favoriteFilmIds, programs, selectedTheaters, showFavoritesOnly, theaters]
+    [programs, selectedTheaters, theaters]
   );
   const dateFilteredPrograms = useMemo(
     () =>
@@ -442,32 +437,18 @@ export default function HomeClient({
             {[
               { name: "All Theaters", logo: "/logos/all-theaters-new.png" },
               ...theaters,
-              { name: "My Favs", logo: "/logos/my-favs.png" },
             ].map((theater) => {
               const accentColor =
-                "slug" in theater
-                  ? theaterAccentColors[theater.slug]
-                  : theater.name === "My Favs"
-                    ? "#D4AF37"
-                    : "#C0C0C0";
+                "slug" in theater ? theaterAccentColors[theater.slug] : "#C0C0C0";
               const isSelected =
                 theater.name === "All Theaters"
-                  ? selectedTheaters.length === 0 && !showFavoritesOnly
-                  : theater.name === "My Favs"
-                    ? showFavoritesOnly
-                    : selectedTheaters.includes(theater.name);
+                  ? selectedTheaters.length === 0
+                  : selectedTheaters.includes(theater.name);
 
               return (
                 <button
                   key={theater.name}
                   onClick={() => {
-                    if (theater.name === "My Favs") {
-                      rotateQuote();
-                      setShowFavoritesOnly((current) => !current);
-                      return;
-                    }
-
-                    setShowFavoritesOnly(false);
                     toggleTheater(theater.name);
                   }}
                   title={theater.name}
