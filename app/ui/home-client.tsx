@@ -444,6 +444,8 @@ export default function HomeClient({
                 theater.name === "All Theaters"
                   ? selectedTheaters.length === 0
                   : selectedTheaters.includes(theater.name);
+              const isDirectorsVillage =
+                "slug" in theater && theater.slug === "directors-village";
 
               return (
                 <button
@@ -452,9 +454,9 @@ export default function HomeClient({
                     toggleTheater(theater.name);
                   }}
                   title={theater.name}
-                  className={`flex h-32 w-32 items-center justify-center rounded-full border bg-black p-3 transition ${
-                    isSelected ? "text-black" : "text-white"
-                  }`}
+                  className={`flex h-32 w-32 items-center justify-center rounded-full border bg-black transition ${
+                    isDirectorsVillage ? "p-1" : "p-3"
+                  } ${isSelected ? "text-black" : "text-white"}`}
                   style={{
                     borderColor: accentColor,
                     boxShadow: isSelected ? `0 0 0 1px ${accentColor}` : "none",
@@ -463,9 +465,11 @@ export default function HomeClient({
                   <Image
                     src={theater.logo}
                     alt={theater.name}
-                    width={104}
-                    height={104}
-                    className="max-h-full max-w-full object-contain"
+                    width={isDirectorsVillage ? 122 : 104}
+                    height={isDirectorsVillage ? 122 : 104}
+                    className={`${
+                      isDirectorsVillage ? "max-h-[122px] max-w-[122px]" : "max-h-full max-w-full"
+                    } object-contain`}
                   />
                 </button>
               );
