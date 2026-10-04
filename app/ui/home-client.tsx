@@ -455,7 +455,7 @@ export default function HomeClient({
                   }}
                   title={theater.name}
                   className={`flex h-32 w-32 items-center justify-center rounded-full border bg-black transition ${
-                    isDirectorsVillage ? "p-1" : "p-3"
+                    isDirectorsVillage ? "p-2" : "p-3"
                   } ${isSelected ? "text-black" : "text-white"}`}
                   style={{
                     borderColor: accentColor,
@@ -465,10 +465,10 @@ export default function HomeClient({
                   <Image
                     src={theater.logo}
                     alt={theater.name}
-                    width={isDirectorsVillage ? 122 : 104}
-                    height={isDirectorsVillage ? 122 : 104}
+                    width={isDirectorsVillage ? 108 : 104}
+                    height={isDirectorsVillage ? 108 : 104}
                     className={`${
-                      isDirectorsVillage ? "max-h-[122px] max-w-[122px]" : "max-h-full max-w-full"
+                      isDirectorsVillage ? "max-h-[108px] max-w-[108px]" : "max-h-full max-w-full"
                     } object-contain`}
                   />
                 </button>
