@@ -126,14 +126,53 @@ function flattenRichTextNode(node: ContentfulRichTextNode | null | undefined): s
 
 function extractNextDataJson(html: string) {
   const match = html.match(
-    /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/
+    /<script\b[^>]*\bid="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
   );
 
-  if (!match) {
-    throw new Error("Unable to find Academy __NEXT_DATA__ payload");
+  if (match) {
+    const data = JSON.parse(match[1]) as AcademyCalendarPageData;
+    if (data.props?.pageProps?.cfProgramsKeyedByTkId) {
+      return data;
+    }
   }
 
-  return JSON.parse(match[1]) as AcademyCalendarPageData;
+  // App Router pages stream the same calendar props across Flight chunks.
+  // Parse only JSON string arguments; never execute the remote scripts.
+  const flight = Array.from(
+    html.matchAll(/self\.__next_f\.push\(\[1\s*,\s*("(?:[^"\\]|\\.)*")\s*\]\)/g),
+    (chunk) => JSON.parse(chunk[1]) as string
+  ).join("");
+
+  function findPrograms(value: unknown): Record<string, AcademyProgramEvent> | null {
+    if (!value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    const programs = record.cfProgramsKeyedByTkId;
+    if (programs && typeof programs === "object" && !Array.isArray(programs)) {
+      return programs as Record<string, AcademyProgramEvent>;
+    }
+    for (const child of Object.values(record)) {
+      const found = findPrograms(child);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  for (const row of flight.split("\n")) {
+    const payload = row.slice(row.indexOf(":") + 1);
+    if (!payload.startsWith("[") && !payload.startsWith("{")) continue;
+    let value: unknown;
+    try {
+      value = JSON.parse(payload);
+    } catch {
+      continue; // Other Flight records contain text or module references.
+    }
+    const programs = findPrograms(value);
+    if (programs) {
+      return { props: { pageProps: { cfProgramsKeyedByTkId: programs } } };
+    }
+  }
+
+  throw new Error("Unable to find Academy calendar program data");
 }
 
 function htmlToText(value: ContentfulRichTextDocument | null | undefined) {

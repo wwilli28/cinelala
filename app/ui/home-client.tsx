@@ -410,7 +410,7 @@ export default function HomeClient({
         </header>
 
         {statuses
-          .filter((status) => !status.available)
+          .filter((status) => !status.available || status.message)
           .map((status) => {
             const theater = theaters.find(
               (candidate) => candidate.slug === status.theater
@@ -422,7 +422,8 @@ export default function HomeClient({
                 className="mb-6 rounded-2xl border border-amber-700/60 bg-amber-950/40 p-4 text-sm text-amber-100"
               >
                 <p className="font-semibold">
-                  {theater?.name ?? status.theater} source unavailable
+                  {theater?.name ?? status.theater}{" "}
+                  {status.available ? "listings incomplete" : "source unavailable"}
                 </p>
                 <p>{status.message}</p>
               </div>

@@ -2,6 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 
 import { getTheater } from "@/lib/constants/theaters";
 import { splitHtmlParagraphs, stripTags } from "@/lib/ingestion/html";
+import { collectPageResults } from "@/lib/ingestion/pages";
 import {
   getBusinessDate,
   parseMonthDayYear,
@@ -187,7 +188,8 @@ export async function getVistaPrograms(): Promise<TheaterProgramsResult> {
   try {
     const scheduleHtml = await fetchVistaHtml(VISTA_SCHEDULE_URL);
     const movieLinks = Array.from(new Set(parseMovieLinks(scheduleHtml)));
-    const groupedPrograms = await Promise.all(
+    if (!movieLinks.length) throw new Error("No Vista screening links found");
+    const { values: groupedPrograms, failedCount } = await collectPageResults(
       movieLinks.map((link) => parseVistaMoviePage(link))
     );
 
@@ -196,7 +198,9 @@ export async function getVistaPrograms(): Promise<TheaterProgramsResult> {
       status: {
         theater: "vista",
         available: true,
-        message: null,
+        message: failedCount
+          ? "Some Vista screenings could not be loaded. Showing available listings."
+          : null,
         sourceUrl: theater.url,
       },
     };
