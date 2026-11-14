@@ -2,13 +2,10 @@ import { cacheLife, cacheTag } from "next/cache";
 
 import { getTheater } from "@/lib/constants/theaters";
 import { enrichProgramFilm } from "@/lib/enrichment/tmdb";
-import { getBusinessDate } from "@/lib/ingestion/time";
+import { fetchHtml } from "@/lib/ingestion/html";
+import { getBusinessDate, isProgramUpcoming } from "@/lib/ingestion/time";
 import { TheaterProgramsResult } from "@/lib/types/screenings";
 
-const LANDMARK_DATA_ROOT =
-  "https://cms-assets.webediamovies.pro/prod/landmarktheatres/2026-04-07/public/page-data/sq/d";
-const LANDMARK_EVENTS_QUERY_URL = `${LANDMARK_DATA_ROOT}/3362424247.json`;
-const LANDMARK_MOVIES_QUERY_URL = `${LANDMARK_DATA_ROOT}/3360083659.json`;
 const NUART_THEATER_ID = "X00CW";
 const NUART_EVENT_TYPES = new Set([
   "Q&A",
@@ -72,6 +69,48 @@ interface LandmarkMoviesResponse {
       nodes?: LandmarkMovieNode[];
     };
   };
+}
+
+async function fetchLandmarkData(theaterUrl: string) {
+  const html = await fetchHtml(theaterUrl);
+  const root = html.match(
+    /<script\b[^>]*\bsrc="(https:\/\/cms-assets\.webediamovies\.pro\/prod\/landmarktheatres\/[^/]+\/public\/)app-[^"]+\.js"/
+  )?.[1];
+  if (!root) throw new Error("Unable to find current Landmark data deployment");
+
+  const path = new URL(theaterUrl).pathname.replace(/^\/+|\/+$/g, "");
+  const manifest = await fetchJson<{ staticQueryHashes?: string[] }>(
+    `${root}page-data/${path}/page-data.json`
+  );
+  const hashes = [...new Set(manifest.staticQueryHashes ?? [])];
+  if (!hashes.length || hashes.some((hash) => !/^\d+$/.test(hash))) {
+    throw new Error("Unable to find Landmark data queries");
+  }
+
+  const queries = await Promise.allSettled(
+    hashes.map((hash) => fetchJson<LandmarkEventsResponse & LandmarkMoviesResponse>(
+      `${root}page-data/sq/d/${hash}.json`
+    ))
+  );
+  // Several queries share a data type; select the populated dataset rather
+  // than depending on deployment-specific GraphQL hashes or manifest order.
+  let events: LandmarkEventNode[] | undefined;
+  let movies: LandmarkMovieNode[] | undefined;
+  for (const query of queries) {
+    if (query.status !== "fulfilled") continue;
+    const eventNodes = query.value.data?.allEvent?.nodes;
+    const movieNodes = query.value.data?.allMovie?.nodes;
+    if (Array.isArray(eventNodes) && (!events || eventNodes.length > events.length)) {
+      events = eventNodes;
+    }
+    if (Array.isArray(movieNodes) && (!movies || movieNodes.length > movies.length)) {
+      movies = movieNodes;
+    }
+  }
+  if (!events?.length || !movies?.length) {
+    throw new Error("Landmark event or movie data is unavailable");
+  }
+  return { events, movies };
 }
 
 interface LandmarkGroupedProgram {
@@ -183,6 +222,9 @@ function getProgramDateTime(
   showtime: [string | null, string | null] | null | undefined
 ) {
   const [start, end] = showtime ?? [null, null];
+  if (start && /^\d{4}-\d{2}-\d{2}$/.test(start)) {
+    return { date: start, startTime: null };
+  }
   const parsedStart = parseSqlDateTime(start);
   const parsedEnd = parseSqlDateTime(end);
 
@@ -211,16 +253,6 @@ function getProgramDateTime(
   }
 
   return null;
-}
-
-function isCineInsomniaLateShow(event: LandmarkEventNode) {
-  const eventType = cleanEventType(event.type);
-  const title = event.title ?? "";
-
-  return (
-    /cine insomnia/i.test(title) ||
-    (eventType === "Late Shows" && /nuart/i.test(title))
-  );
 }
 
 function getSpecialGuests(event: LandmarkEventNode) {
@@ -277,8 +309,7 @@ function groupNuartPrograms(
           continue;
         }
 
-        const resolvedStartTime =
-          dateTime.startTime ?? (isCineInsomniaLateShow(event) ? "22:30" : null);
+        const resolvedStartTime = dateTime.startTime;
         const displayDate = getBusinessDate(dateTime.date, resolvedStartTime);
         const groupKey = `${event.id}::${movieId}::${dateTime.date}`;
         const existingProgram = groupedPrograms.get(groupKey);
@@ -384,18 +415,16 @@ export async function getNuartPrograms(): Promise<TheaterProgramsResult> {
   }
 
   try {
-    const [eventsResponse, moviesResponse] = await Promise.all([
-      fetchJson<LandmarkEventsResponse>(LANDMARK_EVENTS_QUERY_URL),
-      fetchJson<LandmarkMoviesResponse>(LANDMARK_MOVIES_QUERY_URL),
-    ]);
-    const events =
-      eventsResponse.data?.allEvent?.nodes?.filter(
-        (event) => isNuartEvent(event) && isRelevantNuartType(event)
-      ) ?? [];
-    const movies =
-      moviesResponse.data?.allMovie?.nodes?.filter((movie) => Boolean(movie.id)) ?? [];
+    const data = await fetchLandmarkData(theater.url);
+    const events = data.events.filter(
+      (event) => isNuartEvent(event) && isRelevantNuartType(event)
+    );
+    const movies = data.movies.filter((movie) => Boolean(movie.id));
     const moviesById = new Map(movies.map((movie) => [movie.id, movie]));
     const programs = await groupNuartPrograms(events, moviesById);
+    if (programs.length > 0 && !programs.some((program) => isProgramUpcoming(program.date))) {
+      throw new Error("Landmark returned only expired screenings");
+    }
 
     return {
       programs,

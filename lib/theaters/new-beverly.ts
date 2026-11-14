@@ -3,6 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { theaters } from "@/lib/constants/theaters";
 import { enrichProgramFilm } from "@/lib/enrichment/tmdb";
 import { fetchHtml, matchFirst, stripTags } from "@/lib/ingestion/html";
+import { collectPageResults } from "@/lib/ingestion/pages";
 import {
   getBusinessDate,
   parseMonthDayYear,
@@ -267,7 +268,8 @@ export async function getNewBeverlyPrograms(): Promise<TheaterProgramsResult> {
     const scheduleHtml = await fetchHtml(NEW_BEVERLY_THEATER.url);
     const links = parseScheduleLinks(scheduleHtml);
     const uniqueLinks = Array.from(new Set(links));
-    const programsWithNulls = await Promise.all(
+    if (!uniqueLinks.length) throw new Error("No New Beverly screening links found");
+    const { values: programsWithNulls, failedCount } = await collectPageResults(
       uniqueLinks.map((link) => parseProgramPage(link))
     );
     const programs = programsWithNulls.filter(
@@ -279,7 +281,9 @@ export async function getNewBeverlyPrograms(): Promise<TheaterProgramsResult> {
       status: {
         theater: "new-beverly",
         available: true,
-        message: null,
+        message: failedCount
+          ? "Some New Beverly screenings could not be loaded. Showing available listings."
+          : null,
         sourceUrl: NEW_BEVERLY_THEATER.url,
       },
     };
